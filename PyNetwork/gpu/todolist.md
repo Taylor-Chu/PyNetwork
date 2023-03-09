@@ -8,6 +8,7 @@
 
 - Elementwise
     - 2d array: 
+        - logic operations 
         - addition 
         - subtraction 
         - division 
