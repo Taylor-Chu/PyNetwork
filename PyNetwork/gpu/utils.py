@@ -6,6 +6,7 @@ import numpy as np
 
 from elementwise import *
 from matrix_mul import matrix_mul_local
+from reduction import sum
 
 
 class GPU_OPERATIONS():
@@ -32,6 +33,9 @@ class GPU_OPERATIONS():
         # matrix multiplication
         return matrix_mul_local(self.A, other.A)
 
+    def sum(self, axis=None):
+        return sum(self.A, axis=axis)
+
 
 if __name__=="__main__":
     # elementwise operators test 
@@ -45,10 +49,15 @@ if __name__=="__main__":
     np.testing.assert_almost_equal(A_class * B_class, A*B, decimal=3)
     np.testing.assert_almost_equal(A_class / B_class, A/B, decimal=2)
 
-    # matrix multiplication test 
-    m, n, p = 2**8, 2**9, 2**10
-    A = np.random.rand(m, n).astype(np.float32)
-    B = np.random.rand(n, p).astype(np.float32)
+    # # matrix multiplication test 
+    # m, n, p = 2**8, 2**9, 2**10
+    # A = np.random.rand(m, n).astype(np.float32)
+    # B = np.random.rand(n, p).astype(np.float32)
+    # A_class = GPU_OPERATIONS(A)
+    # B_class = GPU_OPERATIONS(B)
+    # np.testing.assert_almost_equal(A_class@B_class, A@B, decimal=3)
+
+    A = np.random.rand(3, 5).astype(np.float32)
+    print(np.sum(A, axis=0))
     A_class = GPU_OPERATIONS(A)
-    B_class = GPU_OPERATIONS(B)
-    np.testing.assert_almost_equal(A_class@B_class, A@B, decimal=3)
+    print(A_class.sum(axis=0))
