@@ -180,6 +180,93 @@ def equal(A, B):
     return out_gpu.get()
 
 
+
+def gpu_exp(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    exp_program = ElementwiseKernel(context,"float *a_gpu, float *out",
+                                          "out[i] = exp(a_gpu[i])",
+                                          "exponential")
+    exp_program(a_gpu,out)
+    return out.get()
+
+def gpu_log(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    log_program = ElementwiseKernel(context,"float *a_gpu, float *out",
+                                          "out[i] = log(a_gpu[i])",
+                                          "logarithm")
+    log_program(a_gpu,out)
+    return out.get()
+
+def gpu_pow(a,b):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    pow_program = ElementwiseKernel(context,"float *a_gpu, float b, float *out",
+                                          "out[i] = pow(a_gpu[i],b)",
+                                          "power")
+    pow_program(a_gpu,b,out)
+    return out.get()
+
+def gpu_sqrt(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    sqrt_program = ElementwiseKernel(context,"float *a_gpu, float *out",
+                                          "out[i] = sqrt(a_gpu[i])",
+                                          "sqrt")
+    sqrt_program(a_gpu,out)
+    return out.get()
+
+def gpu_abs(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    abs_program = ElementwiseKernel(context,"float *a_gpu, float *out",
+                                          "out[i] = fabs(a_gpu[i])",
+                                          "abs")
+    abs_program(a_gpu,out)
+    return out.get()
+
+def gpu_relu(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    relu_program = ElementwiseKernel(context,"float *a_gpu, float *out",
+                                          "out[i] = 0.5* (a_gpu[i] + fabs(a_gpu[i]))",
+                                          "relu")
+    relu_program(a_gpu,out)
+    return out.get()
+
+def gpu_tanh(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    tanh_program = ElementwiseKernel(context,"float *a_gpu, float *out",
+                                          "out[i] = tanh(a_gpu[i])",
+                                          "tanh")
+    tanh_program(a_gpu,out)
+    return out.get()
+def gpu_sigmoid(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    sigmoid_program = ElementwiseKernel(context,
+                                    "float *x, float *out",
+                                    "out[i] = SIGMOID(x[i])",
+                                    "sigmoid",
+                                    preamble='#define SIGMOID(x) x > 0 ? 1.0/(1.0 + exp(-x)) : exp(x) / (exp(x) + 1.0)'
+                                    )
+    sigmoid_program(a_gpu,out)
+    return out.get()
+
+def gpu_swish(a):
+    a_gpu = cl_array.to_device(queue,a.astype(np.float32))
+    out = cl_array.zeros_like(a_gpu)
+    swish_program = ElementwiseKernel(context,
+                                    "float *x, float *out",
+                                    "out[i] = SWISH(x[i])",
+                                    "swish",
+                                    preamble='#define SWISH(x) x > 0 ? x/(1.0 + exp(-x)) : x*exp(x) / (exp(x) + 1.0)'
+                                    )
+    swish_program(a_gpu,out)
+    return out.get()
+
 if __name__=="__main__":
     m, n= 2**8, 2**9
     A = np.random.rand(m, n).astype(np.float32)
