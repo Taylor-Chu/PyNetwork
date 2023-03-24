@@ -1,5 +1,7 @@
 c_code = """
     #define BLOCK_SIZE 16
+    #define A_BLOCK_STRIDE (BLOCK_SIZE * width)
+    #define A_T_BLOCK_STRIDE (BLOCK_SIZE * height)
 
     __kernel void ew_add(__global float *A, __global float *B, int width, __global float *out){
         int col = get_global_id(0);
@@ -47,6 +49,21 @@ c_code = """
 
         int index = row * width + col;
         out[index] = (A[index] == B[index]);
+    }
+
+    __kernel void ew_sign(__global float *A, int width, __global float *out){
+        int col = get_global_id(0);
+        int row = get_global_id(1);
+
+        int index = row * width + col;
+        if (A[index] > 0) {
+            out[index] = 1.0;
+        } else if (A[index] == 0) {
+            out[index] = 0.0;
+        }
+        else{
+            out[index] = -1.0;
+        }
     }
 
     __kernel void reduce(__global float *a,
@@ -115,4 +132,11 @@ c_code = """
 
         a_t[global_row * height + global_col] = a_local[local_col * BLOCK_SIZE + local_row];
     }
+
+    __kernel void naive_transpose(__global float *a_t, __global float *a, int width, int height){
+        unsigned int col = get_global_id(1);
+        unsigned int row = get_global_id(0);
+
+        a_t[col * height + row] = a[row * width + col];
+}
 """
