@@ -1,7 +1,7 @@
 c_code = """
-    #define BLOCK_SIZE 16
-    #define A_BLOCK_STRIDE (BLOCK_SIZE * width)
-    #define A_T_BLOCK_STRIDE (BLOCK_SIZE * height)
+    #define BLOCK_SIZE 2
+    #define A_BLOCK_STRIDE (BLOCK_SIZE * a_width)
+    #define A_T_BLOCK_STRIDE (BLOCK_SIZE * a_height)
 
     __kernel void ew_add(__global float *A, __global float *B, int width, __global float *out){
         int col = get_global_id(0);
@@ -110,33 +110,33 @@ c_code = """
         out[row*widthB + col] = sum;
     }
 
-    __kernel void transpose(__global float *a_t, __global float *a, int width, int height, __local float *a_local){
-        int global_col = get_global_id(0);
-        int global_row = get_global_id(1);
+    __kernel void naive_transpose(__global float *a_t, __global float *a, int width, int height){
+        int read_idx = get_global_id(0) + get_global_id(1) * width;
+        int write_idx = get_global_id(1) + get_global_id(0) * height;
+        a_t[write_idx] = a[read_idx];
 
-        int local_col = get_local_id(0);
-        int local_row = get_local_id(1);
-
-        int local_index = local_row * BLOCK_SIZE + local_col;
-
-        a_local[local_index] = a[global_row * width + global_col];
-
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        int group_col = get_group_id(0);
-        int group_row = get_group_id(1);
-
-        /* Transpose the blocks */
-        global_row = group_col * BLOCK_SIZE + local_row;
-        global_col = group_row * BLOCK_SIZE + local_col;
-
-        a_t[global_row * height + global_col] = a_local[local_col * BLOCK_SIZE + local_row];
     }
 
-    __kernel void naive_transpose(__global float *a_t, __global float *a, int width, int height){
-        unsigned int col = get_global_id(1);
-        unsigned int row = get_global_id(0);
-
-        a_t[col * height + row] = a[row * width + col];
+    __kernel void transpose(__global float *a_t, __global float *a, int a_width, int a_height, __local float *a_local){
+        int base_idx_a   =
+            get_group_id(0) * BLOCK_SIZE +
+            get_group_id(1) * A_BLOCK_STRIDE;
+        int base_idx_a_t =
+            get_group_id(1) * BLOCK_SIZE +
+            get_group_id(0) * A_T_BLOCK_STRIDE;
+        int glob_idx_a   =
+            base_idx_a + get_local_id(0) + a_width * get_local_id(1);
+        int glob_idx_a_t =
+            base_idx_a_t + get_local_id(0) + a_height * get_local_id(1);
+        a_local[get_local_id(1)*BLOCK_SIZE+get_local_id(0)] = a[glob_idx_a];
+        barrier(CLK_LOCAL_MEM_FENCE);
+        a_t[glob_idx_a_t] = a_local[get_local_id(0)*BLOCK_SIZE+get_local_id(1)];
 }
+
+    __kernel void repeat(__global float *out, __global float *A, int width){
+        int index = get_global_id(0);
+        int Arow = index / width;
+
+        out[index] = A[Arow];
+    }
 """

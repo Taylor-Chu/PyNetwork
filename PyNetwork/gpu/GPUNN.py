@@ -18,22 +18,63 @@ class GPUOPERATOR:
         self.queue = queue
         self.program = cl.Program(self.context, c_code).build()
 
+    def repeat(self, a, n):
+        """a is assumed to be on the device, 
+            a is 1-d clarray with size m, return a nd-clarray with size m*n"""
+        length = len(a)
+        C = np.zeros((length, n), dtype=np.float32)
+        out = cl_array.to_device(self.queue, C)
+
+        self.program.repeat(self.queue, (length*n,), None, 
+                            out.data, a.data, np.int32(n)).wait()
+        return out
+
     def add(self, A, B):
         """A, B are assumed to be on the device"""
-        height, width = A.shape 
-        heightB, widthB = B.shape    
-        assert height == heightB and width == widthB, "Arrays have different shapes."
-        out = cl_array.zeros_like(A)
+        if A.ndim == 1:
+            height, width = B.shape
+            if len(A) == height:
+                A = self.repeat(A, width)
+            elif len(A) == width:
+                A = self.repeat(A, height).T
 
+        if B.ndim == 1:
+            height, width = A.shape
+            if len(B) == height:
+                B = self.repeat(B, width)
+            elif len(B) == width:
+                B = self.repeat(B, height).T
+
+        else:
+            height, width = A.shape
+            heightB, widthB = B.shape
+            assert height == heightB and width == widthB, "Arrays have different shapes."
+
+        out = cl_array.zeros_like(A)
         self.program.ew_add(self.queue, (width, height), None, 
                             A.data, B.data, np.int32(width), out.data).wait()
         return out
         
     def sub(self, A, B):
         """A, B are assumed to be on the device"""
-        height, width = A.shape 
-        heightB, widthB = B.shape    
-        assert height == heightB and width == widthB, "Arrays have different shapes."
+        if A.ndim == 1:
+            height, width = B.shape
+            if len(A) == height:
+                A = self.repeat(A, width)
+            elif len(A) == width:
+                A = self.repeat(A, height).T
+
+        if B.ndim == 1:
+            height, width = A.shape
+            if len(B) == height:
+                B = self.repeat(B, width)
+            elif len(B) == width:
+                B = self.repeat(B, height).T
+
+        else:
+            height, width = A.shape
+            heightB, widthB = B.shape
+            assert height == heightB and width == widthB, "Arrays have different shapes."
         out = cl_array.zeros_like(A)
 
         self.program.ew_sub(self.queue, (width, height), None, 
@@ -41,10 +82,24 @@ class GPUOPERATOR:
         return out
 
     def div(self, A, B):
-        """A, B are assumed to be on the device"""
-        height, width = A.shape 
-        heightB, widthB = B.shape    
-        assert height == heightB and width == widthB, "Arrays have different shapes."
+        if A.ndim == 1:
+            height, width = B.shape
+            if len(A) == height:
+                A = self.repeat(A, width)
+            elif len(A) == width:
+                A = self.repeat(A, height).T
+
+        if B.ndim == 1:
+            height, width = A.shape
+            if len(B) == height:
+                B = self.repeat(B, width)
+            elif len(B) == width:
+                B = self.repeat(B, height).T
+
+        else:
+            height, width = A.shape
+            heightB, widthB = B.shape
+            assert height == heightB and width == widthB, "Arrays have different shapes."
         out = cl_array.zeros_like(A)
 
         self.program.ew_div(self.queue, (width, height), None, 
@@ -52,10 +107,24 @@ class GPUOPERATOR:
         return out
 
     def mul(self, A, B):
-        """A, B are assumed to be on the device"""
-        height, width = A.shape 
-        heightB, widthB = B.shape    
-        assert height == heightB and width == widthB, "Arrays have different shapes."
+        if A.ndim == 1:
+            height, width = B.shape
+            if len(A) == height:
+                A = self.repeat(A, width)
+            elif len(A) == width:
+                A = self.repeat(A, height).T
+
+        if B.ndim == 1:
+            height, width = A.shape
+            if len(B) == height:
+                B = self.repeat(B, width)
+            elif len(B) == width:
+                B = self.repeat(B, height).T
+
+        else:
+            height, width = A.shape
+            heightB, widthB = B.shape
+            assert height == heightB and width == widthB, "Arrays have different shapes."
         out = cl_array.zeros_like(A)
 
         self.program.ew_mul(self.queue, (width, height), None, 
@@ -92,7 +161,7 @@ class GPUOPERATOR:
         C = np.empty((heightA, widthB), dtype=np.float32)
         out = cl_array.to_device(self.queue, C)
 
-        BLOCK_SIZE = 16
+        BLOCK_SIZE = np.gcd(np.gcd(widthA, heightA), widthB)
         local_size = (BLOCK_SIZE, BLOCK_SIZE)
 
         self.program.matrixmultiply2dlocal(self.queue, (heightA, widthB), local_size, 
@@ -108,26 +177,26 @@ class GPUOPERATOR:
                                A.data, np.int32(width), out.data).wait()
         return out      
     
-    def transpose(self, A):
-        """A is assumed to be on the device"""
-        global_size = A.shape
-        local_size = None
+    def transpose(self, x):
+        """x is assumed to be on the device"""
+        global_size = x.shape
+        width, height = x.shape
+        BLOCK_SIZE = np.gcd(width, height)
+        local_size = (BLOCK_SIZE, BLOCK_SIZE)
 
-        width, height = A.shape
-        A_transpose = cl_array.zeros_like(A)
-        self.program.naive_transpose(self.queue, global_size, local_size,
-                                     A_transpose.data, A.data, np.int32(width), np.int32(height)).wait()
-        # global_size = A.shape
-        # local_size = (16, 16)
+        out = np.empty((height, width), dtype=np.float32)
+        x_transpose = cl_array.to_device(self.queue, out)
 
-        # width, height = A.shape
-
-        # A_transpose = cl_array.zeros_like(A)
-        # a_local = cl.LocalMemory(4 * 16 * (16 + 1))
+        #x_transpose = cl_array.zeros_like(x)
+        a_local = cl.LocalMemory(4 * BLOCK_SIZE * (BLOCK_SIZE + 1))
         
-        # self.program.transpose(self.queue, global_size, local_size,
-        #                        A_transpose.data, A.data, np.int32(width), np.int32(height), a_local).wait()
-        return A_transpose
+        self.program.transpose(self.queue, global_size, local_size,
+                            x_transpose.data, x.data, np.int32(width), np.int32(height), a_local).wait()
+
+        # self.program.naive_transpose(self.queue, (height*width, ), None,
+        #                             x_transpose.data, x.data, np.int32(height), np.int32(width)).wait()
+        
+        return x_transpose
 
     def sum(self, A, axis=None):
         """A is assumed to be on the device"""

@@ -15,3 +15,5 @@ from .BatchNorm import BatchNorm
 
 # Flatten Layer
 from .Flatten import Flatten
+
+from .Dense_GPU import Dense_GPU

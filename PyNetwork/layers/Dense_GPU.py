@@ -105,8 +105,8 @@ class Dense_GPU(Layer):
         limit = np.sqrt(6 / (np.prod(self.input_shape) + np.prod(self.output_shape)))
         self.W = np.random.uniform(
             low=-limit, high=limit, size=(*self.output_shape, *previous_output_shape)
-        )
-        self.b = np.zeros(self.output_shape)
+        ).astype(np.float32)
+        self.b = np.zeros(self.output_shape).astype(np.float32)
 
         if self.trainable_mask is not None:
             assert self.trainable_mask.shape == self.W.shape, (
@@ -150,7 +150,7 @@ class Dense_GPU(Layer):
         check_layer(self)
 
         # GPU operations
-        out_a = self.gpuoperator.add(self.gpuoperator.matmul(z, self.gpuoperator.transpose(self.W_gpu)), self.b_gpu)
+        out_a = self.gpuoperator.add(self.gpuoperator.matmul(z, self.W_gpu.T), self.b_gpu)
 
         if output_only:
             return self.activation_function_(out_a)
@@ -209,7 +209,7 @@ class Dense_GPU(Layer):
         """
         check_layer(self)
 
-        weight_grad = self.gpuoperator.matmul(self.gpuoperator.transpose(delta), prev_z)
+        weight_grad = self.gpuoperator.matmul(delta.T, prev_z)
         delta_grad = self.gpuoperator.sum(delta, axis=0)
 
         return delta_grad, weight_grad
