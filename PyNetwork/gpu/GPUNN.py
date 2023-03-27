@@ -218,6 +218,44 @@ class GPUOPERATOR:
                                 A.data, r_gpu.data, np.int32(A.shape[1]), np.int32(A.shape[0])).wait()
             return r_gpu
     
+    def mean(self, A, axis=None):
+        """A is assumed to be on the device"""
+        heightA, widthA = A.shape
+        
+        if axis == None:
+            norm = np.array([heightA*widthA]).astype(np.float32)
+            norm_gpu = cl_array.to_device(self.queue,norm)
+            rk = cl_reduction.ReductionKernel(self.context, np.float32, neutral="0", reduce_expr="a+b", map_expr="a[i]",
+                            arguments="__global const float *a")
+            output_sum = rk(A)
+            output = self.div(output_sum,norm_gpu)
+            return output     
+    
+        else:
+            if axis == 1:
+                A = self.transpose(A).copy()
+                norm = np.ones(heightA).astype(np.float32)*widthA
+            else:
+                norm = np.ones(widthA).astype(np.float32)*heightA
+            
+            norm_gpu = cl_array.to_device(self.queue,norm)
+            r = np.empty(A.shape[1]).astype(np.float32)
+            r_gpu = cl_array.to_device(self.queue, r)
+            self.program.reduce(self.queue, (A.shape[0]*A.shape[1], ), None, 
+                                A.data, r_gpu.data, np.int32(A.shape[1]), np.int32(A.shape[0])).wait()
+            output = self.div(r,norm_gpu)
+            return r_gpu
+	
+    def std(self,A,axis=None):
+        mean_square = self.mean(self.pow(A,2),axis=axis)
+        square_mean = self.pow(self.mean(A,axis=axis),2)
+        return self.sqrt(self.sub(mean_square, square_mean))        
+	
+	
+	
+	
+	
+	
     def exp(self, A):
         """A is assumed to be on the device"""
         out = cl_array.zeros_like(A)
@@ -305,3 +343,5 @@ class GPUOPERATOR:
                                     )
         programme(A, out)
         return out
+    
+   
