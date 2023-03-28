@@ -7,7 +7,7 @@ import pyopencl.array as cl_array
 from PyNetwork.gpu.GPUNN import GPUOPERATOR
 from PyNetwork.layers import Layer
 from PyNetwork.validation import check_layer
-from PyNetwork import get_activation_function
+from PyNetwork import get_activation_function_gpu
 
 
 class Dense_GPU(Layer):
@@ -274,8 +274,8 @@ class Dense_GPU(Layer):
 
     @property
     def activation_function_(self):
-        return get_activation_function(
-            self.activation_function, **self.activation_kwargs
+        return get_activation_function_gpu(
+            self.activation_function, self.gpuoperator, **self.activation_kwargs
         )
 
     def __str__(self):

@@ -161,11 +161,38 @@ class GPUOPERATOR:
         C = np.empty((heightA, widthB), dtype=np.float32)
         out = cl_array.to_device(self.queue, C)
 
-        BLOCK_SIZE = np.gcd(np.gcd(widthA, heightA), widthB)
+        BLOCK_SIZE = min(np.gcd(np.gcd(widthA, heightA), widthB), 16)
         local_size = (BLOCK_SIZE, BLOCK_SIZE)
 
         self.program.matrixmultiply2dlocal(self.queue, (heightA, widthB), local_size, 
                     np.int32(heightA), np.int32(widthA), np.int32(heightB), np.int32(widthB), A.data, B.data, out.data).wait()
+        return out
+    
+    def matmul1d(self, A, B):
+        """A, B are assumed to be on the device"""
+        heightA, widthA = A.shape
+        heightB, widthB = B.shape
+        assert widthA == heightB, "Cannot do matrix multiplication."
+        size = heightA * widthB
+
+        C = np.empty((heightA, widthB), dtype=np.float32)
+        out = cl_array.to_device(self.queue, C)
+
+        self.program.matrixmultiply1d(self.queue, (size, ), None, 
+                np.int32(heightA), np.int32(widthA), np.int32(heightB), np.int32(widthB), A.data, B.data, out.data).wait()
+        return out.reshape((heightA, widthB))
+    
+    def matmul2d(self, A, B):
+        """A, B are assumed to be on the device"""
+        heightA, widthA = A.shape
+        heightB, widthB = B.shape
+        assert widthA == heightB, "Cannot do matrix multiplication."
+
+        C = np.empty((heightA, widthB), dtype=np.float32)
+        out = cl_array.to_device(self.queue, C)
+
+        self.program.matrixmultiply2d(self.queue, (heightA, widthB), None, 
+                np.int32(heightA), np.int32(widthA), np.int32(heightB), np.int32(widthB), A.data, B.data, out.data).wait()
         return out
 
     def sign(self, A):
@@ -210,8 +237,7 @@ class GPUOPERATOR:
     
         else:
             if axis == 1:
-                A = self.transpose(A).copy()
-            
+                A = A.T.copy()
             r = np.empty(A.shape[1]).astype(np.float32)
             r_gpu = cl_array.to_device(self.queue, r)
             self.program.reduce(self.queue, (A.shape[0]*A.shape[1], ), None, 
@@ -224,16 +250,16 @@ class GPUOPERATOR:
         
         if axis == None:
             norm = np.array([heightA*widthA]).astype(np.float32)
-            norm_gpu = cl_array.to_device(self.queue,norm)
+            norm_gpu = cl_array.to_device(self.queue, norm)
             rk = cl_reduction.ReductionKernel(self.context, np.float32, neutral="0", reduce_expr="a+b", map_expr="a[i]",
                             arguments="__global const float *a")
             output_sum = rk(A)
-            output = self.div(output_sum,norm_gpu)
+            output = output_sum / norm_gpu
             return output     
     
         else:
             if axis == 1:
-                A = self.transpose(A).copy()
+                A = A.T.copy()
                 norm = np.ones(heightA).astype(np.float32)*widthA
             else:
                 norm = np.ones(widthA).astype(np.float32)*heightA
@@ -243,18 +269,13 @@ class GPUOPERATOR:
             r_gpu = cl_array.to_device(self.queue, r)
             self.program.reduce(self.queue, (A.shape[0]*A.shape[1], ), None, 
                                 A.data, r_gpu.data, np.int32(A.shape[1]), np.int32(A.shape[0])).wait()
-            output = self.div(r,norm_gpu)
-            return r_gpu
+            output = r_gpu / norm_gpu
+            return output
 	
     def std(self,A,axis=None):
         mean_square = self.mean(self.pow(A,2),axis=axis)
         square_mean = self.pow(self.mean(A,axis=axis),2)
-        return self.sqrt(self.sub(mean_square, square_mean))        
-	
-	
-	
-	
-	
+        return self.pow(mean_square - square_mean, 0.5)       
 	
     def exp(self, A):
         """A is assumed to be on the device"""

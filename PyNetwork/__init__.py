@@ -3,6 +3,10 @@ from PyNetwork.functions import get_activation_function
 from PyNetwork.functions import get_error_function
 from PyNetwork.functions import get_metric_function
 
+from PyNetwork.functions_GPU import get_activation_function_gpu
+from PyNetwork.functions_GPU import get_error_function_gpu
+from PyNetwork.functions_GPU import get_metric_function_gpu
+
 # Sequential Class
 from PyNetwork.Sequential import Sequential
 

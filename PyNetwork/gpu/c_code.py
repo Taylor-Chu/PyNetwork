@@ -78,6 +78,29 @@ c_code = """
         r[gj] = sum;  
     }
 
+    __kernel void matrixmultiply1d(int heightA, int widthA, int heightB, int widthB, __global float *A, __global float *B, __global float *out){
+        int index = get_global_id(0);
+        int Arow = index / widthB;
+        int Bcol = index % widthB;
+        float sum = 0.0f;
+        for (int i = 0; i < widthA; i++){
+            sum += A[Arow * widthA + i] * B[i * widthB + Bcol];
+        }
+        out[index] = sum;
+    }
+
+    __kernel void matrixmultiply2d(int heightA, int widthA, int heightB, int widthB, __global float *A, __global float *B, __global float *out){
+        int row = get_global_id(1);
+        int col = get_global_id(0);
+    
+        float sum = 0.0f;
+        for (int i=0; i < widthA; i++){
+            sum += A[row * widthA + i] * B[i * widthB + col];
+        }
+
+        out[row*widthB + col] = sum;
+    }
+
     __kernel void matrixmultiply2dlocal(int heightA, int widthA, int heightB, int widthB, __global float *A, __global float *B, __global float *out){
         int local_row = get_local_id(1);
         int local_col = get_local_id(0);
