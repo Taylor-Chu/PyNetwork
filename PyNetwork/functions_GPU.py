@@ -66,7 +66,7 @@ def get_error_function_gpu(name, operator):
             if grad:
                 return 2*(predictions - targets)
             N = predictions.shape[0]
-            return operator.sum() / N
+            return operator.sum(operator.pow(predictions-targets,2)) / (2*N)
             #return np.sum(((predictions - targets)**2)/2)/N
         return mse
     elif name == 'cross_entropy':
@@ -88,13 +88,13 @@ def get_error_function_gpu(name, operator):
                     (N, k) np.array
                         If grad = True then the gradient of the output is returned
             """
-            predictions = np.clip(predictions, epsilon, 1. - epsilon)
+            predictions = operator.clip(predictions, epsilon, 1. - epsilon)
 
             if grad:
-                return -targets/predictions + (1 - targets)/(1 - predictions)
+                return  operator.div((1 - targets),(1 - predictions))-operator.div(targets,predictions)
 
             N = predictions.shape[0]
-            ce = -np.sum(targets*np.log(predictions+1e-9))/N
+            ce = -operator.sum(operator.mul(targets,operator.log(predictions+1e-9)))/N
             return ce
         return cross_entropy
     else:
@@ -116,7 +116,7 @@ def get_metric_function_gpu(name):
     """
     if name == 'accuracy':
         def accuracy(predictions, target):
-            return np.mean(np.argmax(predictions, axis=-1) == np.argmax(target, axis=-1))
+            return np.mean(np.argmax(predictions.get(), axis=-1) == np.argmax(target.get(), axis=-1))
         return accuracy
     else:
         raise Exception(f'{name} is not a defined metric.')
