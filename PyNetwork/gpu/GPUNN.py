@@ -364,5 +364,12 @@ class GPUOPERATOR:
                                     )
         programme(A, out)
         return out
-    
+    def clip(self,A,vmin,vmax):
+        """
+		Use 2 relus to perform clipping
+		
+
+    	"""
+        return self.relu(A-vmin) - self.relu(A-vmax) + vmin
+		 
    
