@@ -68,7 +68,7 @@ class RMSprop_GPU(Optimizer):
         self.v = {key: self.rho * v + (1 - self.rho) * g**2 if g is not None else None
                   for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
-        return {key: self.learning_rate * g / np.sqrt(v + self.e) if g is not None else None
+        return {key: self.learning_rate * g / self.gpuoperator.pow((v + self.e), 0.5) if g is not None else None
                 for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
     def new_instance(self):

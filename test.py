@@ -97,7 +97,10 @@ gpuoperator = GPUOPERATOR(context=context, queue=queue)
 # C = gpuoperator.matmul(A_gpu, B_gpu)
 # print(C.shape)
 # print(type(C))
-
+# x_train_gpu = cl_array.to_device(queue, x_train.astype(np.float32))
+# x_test_gpu = cl_array.to_device(queue, x_test.astype(np.float32))
+# y_train_gpu = cl_array.to_device(queue, y_train.astype(np.float32))
+# y_test_gpu = cl_array.to_device(queue, y_test.astype(np.float32))
 
 model_gpu = PyNetwork.Sequential_GPU(context=context,queue=queue, gpuoperator=gpuoperator)
 

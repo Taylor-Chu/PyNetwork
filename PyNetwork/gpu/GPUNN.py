@@ -163,7 +163,7 @@ class GPUOPERATOR:
 
         BLOCK_SIZE = min(np.gcd(np.gcd(widthA, heightA), widthB), 16)
         local_size = (BLOCK_SIZE, BLOCK_SIZE)
-        breakpoint()
+
         self.program.matrixmultiply2dlocal(self.queue, (heightA, widthB), local_size, 
                     np.int32(heightA), np.int32(widthA), np.int32(heightB), np.int32(widthB), A.data, B.data, out.data).wait()
         return out

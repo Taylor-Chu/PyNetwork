@@ -105,8 +105,8 @@ class BatchNormGrads:
         half = -0.5
         c = gpuoperator.pow(half * (gpuoperator.pow(sigma, 2) + epsilon), -1.5)
         # return c * np.sum(dz_hat_ * (z - mu), axis=0)
-        return gpuoperator.mul(
-            c, gpuoperator.sum(gpuoperator.mul(gpuoperator.sub(z, mu), dz_hat_), axis=0)
+        return c * gpuoperator.sum(
+            gpuoperator.mul(gpuoperator.sub(z, mu), dz_hat_), axis=0
         )
 
     @staticmethod
@@ -142,14 +142,10 @@ class BatchNormGrads:
         m_one = -1
         m_two = -2
         # return (-1 / np.sqrt(sigma**2 + epsilon))*np.sum(dz_hat_, axis=0) + dsigma2_ * np.mean(-2*(z - mu), axis=0)
-        return gpuoperator.add(
-            gpuoperator.mul(
-                m_one / gpuoperator.pow((gpuoperator.pow(sigma, 2) + epsilon), 0.5),
-                gpuoperator.sum(dz_hat_, axis=0),
-            ),
-            gpuoperator.mul(
-                dsigma2_, gpuoperator.mean(m_two * gpuoperator.sub(z, mu)), axis=0
-            ),
+        return m_one / gpuoperator.pow(
+            (gpuoperator.pow(sigma, 2) + epsilon), 0.5
+        ) * gpuoperator.sum(dz_hat_, axis=0) + dsigma2_ * gpuoperator.mean(
+            m_two * gpuoperator.sub(z, mu), axis=0
         )
 
     @staticmethod
@@ -235,12 +231,7 @@ class BatchNorm_GPU(Layer):
         Incorrect Use: Fully Connected -> Batch-Norm -> Activation Function (Batch-norm before activation)
     """
 
-    def __init__(
-        self,
-        context,
-        queue,
-        gpuoperator
-    ):
+    def __init__(self, context, queue, gpuoperator):
         """Initise Class"""
         self.built = False
         self.epsilon_gpu = 1e-10
@@ -352,7 +343,9 @@ class BatchNorm_GPU(Layer):
         check_layer(self)
 
         # dz_ = BatchNormGrads.dz(prev_z, new_delta, self.gamma, self.epsilon)
-        dz_ = BatchNormGrads.dz(prev_z, new_delta, self.gamma_gpu, self.epsilon_gpu)
+        dz_ = BatchNormGrads.dz(
+            self.gpuoperator, prev_z, new_delta, self.gamma_gpu, self.epsilon_gpu
+        )
         # return dz_ * prev_z
         return self.gpuoperator.mul(dz_, prev_z)
 
@@ -377,11 +370,10 @@ class BatchNorm_GPU(Layer):
         # z_hat = (prev_z - np.mean(prev_z, axis=0)) / np.sqrt(np.std(prev_z, axis=0) ** 2 + self.epsilon)
         z_hat = self.gpuoperator.div(
             self.gpuoperator.sub(prev_z, self.gpuoperator.mean(prev_z, axis=0)),
-            self.gpuoperator.sqrt(
-                self.gpuoperator.add(
-                    self.gpuoperator.pow(self.gpuoperator.std(prev_z, axis=0), 2),
-                    self.epsilon_gpu,
-                )
+            self.gpuoperator.pow(
+                self.gpuoperator.pow(self.gpuoperator.std(prev_z, axis=0), 2)
+                + self.epsilon_gpu,
+                0.5,
             ),
         )
         r_a = self.gpuoperator.sum(delta, axis=0)
@@ -403,8 +395,8 @@ class BatchNorm_GPU(Layer):
 
         # self.beta -= beta_updates
         # self.gamma -= gamma_updates
-        self.beta_gpu = self.gpuoperator.sub(self.beta_gpu, beta_updates)
-        self.gamma_gpu = self.gpuoperator.sub(self.gamma_gpu, gamma_updates)
+        self.beta_gpu = self.beta_gpu - beta_updates
+        self.gamma_gpu = self.gamma_gpu - gamma_updates
 
     def get_weights(self):
         check_layer(self)

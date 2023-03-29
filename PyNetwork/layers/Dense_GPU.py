@@ -183,9 +183,8 @@ class Dense_GPU(Layer):
         """
         check_layer(self)
         # GPU operations
-        out = self.gpuoperator.mul(
-            g_prime, self.gpuoperator.matmul(new_delta, self.W_gpu)
-        )
+        out = g_prime * self.gpuoperator.matmul(new_delta, self.W_gpu)
+        
         return out
 
     def get_weight_grad_(self, delta, prev_z):
@@ -260,7 +259,7 @@ class Dense_GPU(Layer):
                 ),
             )
 
-        self.b_gpu = self.gpuoperator.sub(self.b_gpu, bias_updates)
+        self.b_gpu = self.b_gpu - bias_updates
 
     def get_weights(self):
         check_layer(self)
