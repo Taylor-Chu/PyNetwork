@@ -9,6 +9,7 @@ from PyNetwork.functions_GPU import get_metric_function_gpu
 
 # Sequential Class
 from PyNetwork.Sequential import Sequential
+from PyNetwork.Sequential_GPU import Sequential_GPU
 
 # Network Layers
 import PyNetwork.layers as layers

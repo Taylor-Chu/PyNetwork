@@ -40,6 +40,7 @@ class Dense_GPU(Layer):
         self,
         context,
         queue,
+        gpuoperator, 
         hidden_nodes,
         activation_function,
         l1=0.0,
@@ -72,7 +73,7 @@ class Dense_GPU(Layer):
 
         self.context = context
         self.queue = queue
-        self.gpuoperator = GPUOPERATOR(context, queue)
+        self.gpuoperator = gpuoperator
 
         if trainable_mask is not None:
             assert isinstance(trainable_mask, np.ndarray)

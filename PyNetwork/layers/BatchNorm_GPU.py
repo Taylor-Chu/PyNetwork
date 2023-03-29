@@ -239,6 +239,7 @@ class BatchNorm_GPU(Layer):
         self,
         context,
         queue,
+        gpuoperator
     ):
         """Initise Class"""
         self.built = False
@@ -254,7 +255,7 @@ class BatchNorm_GPU(Layer):
 
         self.context = context
         self.queue = queue
-        self.gpuoperator = GPUOPERATOR(context, queue)
+        self.gpuoperator = gpuoperator
 
     def build(self, previous_output_shape):
         """Initialise Attributes `gamma` and `beta`

@@ -31,7 +31,7 @@ class Flatten_GPU(Layer):
         into a vector first. This `Flatten` class performs such flattening
     """
 
-    def __init__(self, context, queue):
+    def __init__(self, context, queue, gpuoperator):
         self.built = False
         self.activation_function = 'linear'
 
@@ -40,7 +40,7 @@ class Flatten_GPU(Layer):
 
         self.context = context
         self.queue = queue
-        self.gpuoperator = GPUOPERATOR(context, queue)
+        self.gpuoperator = gpuoperator
 
     def build(self, previous_output_shape):
         """ Built/initialised the layer
@@ -52,7 +52,7 @@ class Flatten_GPU(Layer):
         """
 
         self.input_shape = previous_output_shape
-        self.output_shape = (np.prod(previous_output_shape.get()), )
+        self.output_shape = (np.prod(previous_output_shape), )
 
         self.built = True
 

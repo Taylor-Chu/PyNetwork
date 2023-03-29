@@ -1,5 +1,5 @@
 c_code = """
-    #define BLOCK_SIZE 2
+    #define BLOCK_SIZE 4
     #define A_BLOCK_STRIDE (BLOCK_SIZE * a_width)
     #define A_T_BLOCK_STRIDE (BLOCK_SIZE * a_height)
 

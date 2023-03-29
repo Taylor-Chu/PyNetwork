@@ -9,6 +9,7 @@ from .SGD import SGD
 
 # RMSprop
 from .RMSprop import RMSprop
+from .RMSprop_GPU import RMSprop_GPU
 
 # Get optimiser by string
 from .get_optimizer import get_optimizer
