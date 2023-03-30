@@ -97,10 +97,10 @@ gpuoperator = GPUOPERATOR(context=context, queue=queue)
 # C = gpuoperator.matmul(A_gpu, B_gpu)
 # print(C.shape)
 # print(type(C))
-# x_train_gpu = cl_array.to_device(queue, x_train.astype(np.float32))
-# x_test_gpu = cl_array.to_device(queue, x_test.astype(np.float32))
-# y_train_gpu = cl_array.to_device(queue, y_train.astype(np.float32))
-# y_test_gpu = cl_array.to_device(queue, y_test.astype(np.float32))
+x_train_gpu = cl_array.to_device(queue, x_train.astype(np.float32))
+x_test_gpu = cl_array.to_device(queue, x_test.astype(np.float32))
+y_train_gpu = cl_array.to_device(queue, y_train.astype(np.float32))
+y_test_gpu = cl_array.to_device(queue, y_test.astype(np.float32))
 
 model_gpu = PyNetwork.Sequential_GPU(context=context,queue=queue, gpuoperator=gpuoperator)
 
@@ -113,4 +113,4 @@ model_gpu.add( PyNetwork.layers.Dense_GPU(hidden_nodes=10, activation_function='
 optimizer = PyNetwork.optimizers.RMSprop_GPU(context=context,queue=queue, gpuoperator=gpuoperator,learning_rate=0.0005)
 model_gpu.build(loss_function='cross_entropy', optimizer=optimizer, metrics='accuracy')
 
-model_gpu.train(x_train, y_train, epochs=10, batch_size=128, verbose=True)
+model_gpu.train(x_train_gpu, y_train_gpu, epochs=10, batch_size=128, verbose=True)

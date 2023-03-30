@@ -218,17 +218,17 @@ class Sequential_GPU:
             for i in range(np.ceil(training_length / batch_size).astype(int)):
                 start, end = i * batch_size, (i + 1) * batch_size
                 batch_x, batch_y = x_train[index[start:end]], y_train[index[start:end]]
-                batch_x_gpu = cl_array.to_device(self.queue, batch_x.astype(np.float32))
-                batch_y_gpu = cl_array.to_device(self.queue, batch_y.astype(np.float32))
+                # batch_x_gpu = cl_array.to_device(self.queue, batch_x.astype(np.float32))
+                # batch_y_gpu = cl_array.to_device(self.queue, batch_y.astype(np.float32))
 
-                self._back_prop(batch_x_gpu, batch_y_gpu)
+                self._back_prop(batch_x, batch_y)
 
             if verbose:
                 start, end = 0, batch_size
                 batch_x, batch_y = x_train[index[start:end]], y_train[index[start:end]]
-                batch_x_gpu = cl_array.to_device(self.queue, batch_x.astype(np.float32))
-                batch_y_gpu = cl_array.to_device(self.queue, batch_y.astype(np.float32))
-                evaluation = self.evaluate(batch_x_gpu, batch_y_gpu)
+                # batch_x_gpu = cl_array.to_device(self.queue, batch_x.astype(np.float32))
+                # batch_y_gpu = cl_array.to_device(self.queue, batch_y.astype(np.float32))
+                evaluation = self.evaluate(batch_x, batch_y)
                 print(f'Epoch {_ + 1}/{epochs}')
                 print(evaluation)
 
