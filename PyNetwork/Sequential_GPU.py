@@ -286,7 +286,7 @@ class Sequential_GPU:
         # Compute delta for the last layer
         delta_dict[self.n] = self.loss(z_dict[self.n], y_train, grad=True)  # Gradient of output
         if self.loss_function == 'cross_entropy':
-            delta_dict[self.n] = self.gpuoperator.sub(z_dict[self.n], y_train)
+            delta_dict[self.n] = z_dict[self.n] - y_train
 
         # Compute the weight gradients for the i-th layer and then compute delta_{i-1} for the
         # next layer in the network

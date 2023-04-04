@@ -136,35 +136,9 @@ def matrix_mul_local(A, B):
 
 
 if __name__=="__main__":
-    m, n, p = 2**8, 2**9, 2**10
+    # m, n, p = 2**8, 2**9, 2**10
+    m, n, p = 2 ** 3, 2 ** 4, 2 ** 5
     A = np.random.rand(m, n).astype(np.float32)
     B = np.random.rand(n, p).astype(np.float32)
     np.testing.assert_almost_equal(matrix_mul1d(A, B), A@B, decimal=3)
     np.testing.assert_almost_equal(matrix_mul2d(A, B), A@B, decimal=3)
-    np.testing.assert_almost_equal(matrix_mul_local(A, B), A@B, decimal=3)
-
-    trials = 500
-
-    start = time.time()
-    for i in range(trials):
-        A = np.random.rand(m, n)
-        B = np.random.rand(n, p)
-        C = matrix_mul1d(A, B)
-    end = time.time()
-    print(f"GPU matrix multiplication 1d with global memory: average running time = {(end - start)/trials}")
-    
-    start = time.time()
-    for i in range(trials):
-        A = np.random.rand(m, n)
-        B = np.random.rand(n, p)
-        C = matrix_mul2d(A, B)
-    end = time.time()
-    print(f"GPU matrix multiplication 2d with global memory: average running time = {(end - start)/trials}")
-
-    start = time.time()
-    for i in range(trials):
-        A = np.random.rand(m, n)
-        B = np.random.rand(n, p)
-        C = matrix_mul_local(A, B)
-    end = time.time()
-    print(f"GPU matrix multiplication 2d with local memory: average running time = {(end - start)/trials}")

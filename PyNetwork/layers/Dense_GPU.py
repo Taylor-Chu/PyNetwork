@@ -151,7 +151,7 @@ class Dense_GPU(Layer):
         check_layer(self)
 
         # GPU operations
-        out_a = self.gpuoperator.add(self.gpuoperator.matmul(z, self.W_gpu.T), self.b_gpu)
+        out_a = self.gpuoperator.dense_predict(z, self.W_gpu, self.b_gpu)
 
         if output_only:
             return self.activation_function_(out_a)
@@ -209,7 +209,7 @@ class Dense_GPU(Layer):
         """
         check_layer(self)
 
-        weight_grad = self.gpuoperator.matmul(delta.T, prev_z)
+        weight_grad = self.gpuoperator.dense_weight_gradient(delta, prev_z)
         delta_grad = self.gpuoperator.sum(delta, axis=0)
 
         return delta_grad, weight_grad
