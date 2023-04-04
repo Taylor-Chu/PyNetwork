@@ -19,6 +19,29 @@ class GPUOPERATOR:
         self.queue = queue
         self.program = cl.Program(self.context, c_code).build()
 
+        self.relu_program = ElementwiseKernel(self.context,
+                                              "float *x, float *out",
+                                              "out[i] = x[i] > 0 ? x[i] : 0.0",
+                                              "relu")
+
+        self.exp_program = ElementwiseKernel(self.context, "float *a_gpu, float *out",
+                                             "out[i] = exp(a_gpu[i])",
+                                             "exponential")
+
+        self.log_program = ElementwiseKernel(self.context, "float *a_gpu, float *out",
+                                      "out[i] = log(a_gpu[i])",
+                                      "logarithm")
+        self.pow_program = ElementwiseKernel(self.context, "float *a_gpu, float b, float *out",
+                                      "out[i] = pow(a_gpu[i],b)",
+                                      "power")
+        self.abs_program = ElementwiseKernel(self.context, "float *a_gpu, float *out",
+                                      "out[i] = fabs(a_gpu[i])",
+                                      "abs")
+
+        self.clip_program = ElementwiseKernel(self.context, "float *a_gpu, float *out, float vmin, float vmax",
+                                      "out[i] = a_gpu[i] < vmin ? vmin : (a_gpu[i] > vmax ? vmax : a_gpu[i])",
+                                      "clip")
+
     def repeat(self, a, n):
         """a is assumed to be on the device, 
             a is 1-d clarray with size m, return a nd-clarray with size m*n"""
@@ -296,60 +319,33 @@ class GPUOPERATOR:
     def exp(self, A):
         """A is assumed to be on the device"""
         out = cl_array.zeros_like(A)
-        programme = ElementwiseKernel(self.context, "float *a_gpu, float *out",
-                                      "out[i] = exp(a_gpu[i])",
-                                      "exponential")
 
-        programme(A, out)
+        self.exp_program(A, out)
         return out
 
     def log(self, A):
         """A is assumed to be on the device"""
         out = cl_array.zeros_like(A)
-        programme = ElementwiseKernel(self.context, "float *a_gpu, float *out",
-                                      "out[i] = log(a_gpu[i])",
-                                      "logarithm")
-        programme(A, out)
+
+        self.log_program(A, out)
         return out
 
     def pow(self, A, b):
         """A is assumed to be on the device"""
         out = cl_array.zeros_like(A)
-        programme = ElementwiseKernel(self.context, "float *a_gpu, float b, float *out",
-                                      "out[i] = pow(a_gpu[i],b)",
-                                      "power")
-        programme(A, b, out)
-        return out
-
-    def sqrt(self, A):
-        """A is assumed to be on the device"""
-        out = cl_array.zeros_like(A)
-        programme = ElementwiseKernel(self.context, "float *a_gpu, float *out",
-                                      "out[i] = sqrt(a_gpu[i])",
-                                      "sqrt")
-        programme(A, out)
+        self.pow_program(A, b, out)
         return out
 
     def abs(self, A):
         """A is assumed to be on the device"""
         out = cl_array.zeros_like(A)
-        programme = ElementwiseKernel(self.context, "float *a_gpu, float *out",
-                                      "out[i] = fabs(a_gpu[i])",
-                                      "abs")
-        programme(A, out)
+        self.abs_program(A, out)
         return out
 
     def relu(self, A):
         """A is assumed to be on the device"""
         out = cl_array.zeros_like(A)
-        relu_program = ElementwiseKernel(self.context,
-                                         "float *x, float *out",
-                                         "out[i] = x[i] > 0 ? x[i] : 0.0",
-                                         "relu")
-        # programme = ElementwiseKernel(self.context,"float *a_gpu, float *out",
-        #                                   "out[i] = 0.5* (a_gpu[i] + fabs(a_gpu[i]))",
-        #                                   "relu")
-        relu_program(A, out)
+        self.relu_program(A, out)
         return out
 
     def tanh(self, A):
@@ -386,17 +382,10 @@ class GPUOPERATOR:
         return out
 
     def clip(self, A, vmin, vmax):
-        """
-		Use 2 relus to perform clipping
-    	"""
         out = cl_array.zeros_like(A)
-        programme = ElementwiseKernel(self.context, "float *a_gpu, float *out, float vmin, float vmax",
-                                      "out[i] = a_gpu[i] < vmin ? vmin : (a_gpu[i] > vmax ? vmax : a_gpu[i])",
-                                      "clip")
 
-        programme(A, out, np.float32(vmin), np.float32(vmax))
+        self.clip_program(A, out, np.float32(vmin), np.float32(vmax))
         return out
-        # return self.relu(A-vmin) - self.relu(A-vmax) + vmin
 
     def softmax(self, A):
         """A is assumed to be on the device"""
