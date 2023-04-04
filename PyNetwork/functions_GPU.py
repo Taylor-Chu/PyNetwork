@@ -1,5 +1,5 @@
 import numpy as np
-
+import pyopencl.array as cl_array
 
 def get_activation_function_gpu(name, gpuoperator, **kwargs):
     """ Returns the function of the given name
@@ -18,7 +18,7 @@ def get_activation_function_gpu(name, gpuoperator, **kwargs):
     if name == 'relu':
         def relu(x, grad=False):
             if grad:
-                return (x > 0).astype(int)
+                return (x > 0).astype(np.float32)
 
             x = gpuoperator.relu(x)
             return x
@@ -28,13 +28,10 @@ def get_activation_function_gpu(name, gpuoperator, **kwargs):
     elif name == 'softmax':
         def softmax(x, grad=False):
             if grad:
-                softmax_val = softmax(x, grad=False)
+                softmax_val = gpuoperator.softmax(x)
                 return softmax_val*(1 - softmax_val)
 
-            z = x - np.max(x, axis=-1, keepdims=True)
-            numerator = np.exp(z)
-            denominator = np.sum(numerator, axis=-1, keepdims=True)
-            return numerator / denominator
+            return gpuoperator.softmax(x)
         # END def softmax
         return softmax
     
@@ -64,9 +61,9 @@ def get_error_function_gpu(name, operator):
     if name == 'mse':
         def mse(predictions, targets, grad = False):
             if grad:
-                return 2*(predictions - targets)
+                return np.float32(2) * (predictions - targets)
             N = predictions.shape[0]
-            return operator.sum(operator.pow(predictions-targets,2)) / (2*N)
+            return cl_array.sum(operator.pow(predictions-targets, 2)) / np.float32(2*N)
             #return np.sum(((predictions - targets)**2)/2)/N
         return mse
     elif name == 'cross_entropy':
@@ -91,10 +88,11 @@ def get_error_function_gpu(name, operator):
             predictions = operator.clip(predictions, epsilon, 1. - epsilon)
 
             if grad:
-                return  operator.div((1 - targets),(1 - predictions))-operator.div(targets,predictions)
+                return (predictions - targets) / (predictions*(1-predictions))
+                #return  operator.div((1 - targets),(1 - predictions))-operator.div(targets,predictions)
 
             N = predictions.shape[0]
-            ce = -operator.sum(operator.mul(targets,operator.log(predictions+1e-9)))/N
+            ce = -operator.sum(operator.mul(targets, operator.log(predictions+1e-9))).get()/N
             return ce
         return cross_entropy
     else:

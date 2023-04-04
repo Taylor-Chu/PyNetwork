@@ -229,37 +229,36 @@ class Dense_GPU(Layer):
             weigh_updates is assumed to be on GPU
         """
         check_layer(self)
-
         regularization_grad = cl_array.zeros_like(self.W_gpu)
         if self.l1 > 0:
-            self.l1_gpu = cl_array.to_device(self.queue, self.l1 * np.ones_like(self.W))
+            #self.l1_gpu = cl_array.to_device(self.queue, self.l1 * np.ones_like(self.W))
             regularization_grad = self.gpuoperator.add(
                 regularization_grad,
-                self.gpuoperator.mul(self.l1_gpu, self.gpuoperator.sign(self.W_gpu)),
+                self.l1 * self.gpuoperator.sign(self.W_gpu),
             )
         if self.l2 > 0:
-            self.l2_gpu = cl_array.to_device(self.queue, self.l2 * np.ones_like(self.W))
+            #self.l2_gpu = cl_array.to_device(self.queue, self.l2 * np.ones_like(self.W))
             regularization_grad = self.gpuoperator.add(
-                regularization_grad, self.gpuoperator.mul(self.l2_gpu, self.W_gpu)
+                regularization_grad, self.l2 * self.W_gpu
             )
 
         if self.trainable_mask is None:
-            self.W_gpu = self.gpuoperator.sub(
-                self.W_gpu, self.gpuoperator.add(weight_updates, regularization_grad)
-            )
+            # self.W_gpu = (self.gpuoperator.sub(
+            #     self.W_gpu, self.gpuoperator.add(weight_updates, regularization_grad))).copy()
+            self.W_gpu -= weight_updates
         else:
             self.trainable_mask_gpu = cl_array.to_device(
                 self.queue, self.trainable_mask
             )
-            self.W_gpu = self.gpuoperator.sub(
+            self.W_gpu = (self.gpuoperator.sub(
                 self.W_gpu,
                 self.gpuoperator.mul(
                     self.trainable_mask_gpu,
                     self.gpuoperator.add(weight_updates, regularization_grad),
                 ),
-            )
-
-        self.b_gpu = self.b_gpu - bias_updates
+            )).copy()
+        # self.b_gpu = self.gpuoperator.sub1d(self.b_gpu, bias_updates)
+        self.b_gpu -= bias_updates
 
     def get_weights(self):
         check_layer(self)

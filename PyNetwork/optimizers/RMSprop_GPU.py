@@ -19,7 +19,7 @@ class RMSprop_GPU(Optimizer):
             Stores the moving average of the second raw momentum
     """
 
-    def __init__(self, context, queue, gpuoperator, learning_rate=0.001, rho=0.9, e=1e-7):
+    def __init__(self, gpuoperator, learning_rate=0.001, rho=0.9, e=1e-7):
         """ Initialise attributes of Adam Optimiser
 
             Parameters
@@ -31,8 +31,6 @@ class RMSprop_GPU(Optimizer):
         self.learning_rate = learning_rate
         self.rho = rho
         self.e = e
-        self.context = context
-        self.queue = queue
         self.gpuoperator = gpuoperator
  
         self.v = None
@@ -68,8 +66,9 @@ class RMSprop_GPU(Optimizer):
         self.v = {key: self.rho * v + (1 - self.rho) * g**2 if g is not None else None
                   for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
+        # print(self.learning_rate)
         return {key: self.learning_rate * g / self.gpuoperator.pow((v + self.e), 0.5) if g is not None else None
                 for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
     def new_instance(self):
-        return RMSprop_GPU(self.context, self.queue, self.gpuoperator, self.learning_rate, self.rho, self.e)
+        return RMSprop_GPU(self.gpuoperator, self.learning_rate, self.rho, self.e)

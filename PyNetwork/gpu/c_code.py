@@ -19,6 +19,12 @@ c_code = """
         out[index] = A[index] - B[index];
     }
 
+    __kernel void ew_sub1d(__global float *A, __global float *B, int width, __global float *out){
+        int index = get_global_id(0);
+        
+        out[index] = A[index] - B[index];
+    }
+
     __kernel void ew_div(__global float *A, __global float *B, int width, __global float *out){
         int col = get_global_id(0);
         int row = get_global_id(1);
@@ -161,5 +167,18 @@ c_code = """
         int Arow = index / width;
 
         out[index] = A[Arow];
+    }
+
+    __kernel void max_across_last_axis(__global const double *x, const int input_length, __global double *out)
+    {
+        int i = get_global_id(0);
+        double max = x[i*input_length + 0];
+        double x0 = 0.0;
+        for (int n = 1; n < input_length; n++)
+        {
+            x0 = x[i*input_length + n];
+            max = x0 > max ? x0 : max;
+        }
+        out[i] = max;
     }
 """

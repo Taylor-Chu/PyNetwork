@@ -103,7 +103,7 @@ class BatchNormGrads:
 
         # c = (-0.5 * (sigma ** 2 + epsilon) ** (-3 / 2))
         half = -0.5
-        c = gpuoperator.pow(half * (gpuoperator.pow(sigma, 2) + epsilon), -1.5)
+        c = half * gpuoperator.pow((gpuoperator.pow(sigma, 2) + epsilon), -1.5)
         # return c * np.sum(dz_hat_ * (z - mu), axis=0)
         return c * gpuoperator.sum(
             gpuoperator.mul(gpuoperator.sub(z, mu), dz_hat_), axis=0
@@ -262,8 +262,8 @@ class BatchNorm_GPU(Layer):
         self.gamma = np.ones(self.input_shape)
         self.beta = np.zeros(self.input_shape)
 
-        self.gamma_gpu = cl_array.to_device(self.queue, self.gamma)
-        self.beta_gpu = cl_array.to_device(self.queue, self.beta)
+        self.gamma_gpu = cl_array.to_device(self.queue, self.gamma.astype(np.float32))
+        self.beta_gpu = cl_array.to_device(self.queue, self.beta.astype(np.float32))
 
         self.built = True
 

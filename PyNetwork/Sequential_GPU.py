@@ -131,7 +131,7 @@ class Sequential_GPU:
         if output_only:
             working_z = x_train
             for i in range(1, self.n + 1):  # Propagate working_Z throughout the layers
-                working_z = self.layers[i].predict(working_z, output_only=True)
+                working_z = (self.layers[i].predict(working_z, output_only=True)).copy()
             return working_z
         else:
             a_dict = {0: None}
@@ -169,7 +169,11 @@ class Sequential_GPU:
 
         loss_val = self.loss(prediction, y_test)
 
-        eval_str = f'{self.loss_function}: {format(loss_val.get(), ".4f")}'
+        try:
+            eval_str = f'{self.loss_function}: {format(loss_val.get(), ".4f")}'
+        except AttributeError:
+            eval_str = f'{self.loss_function}: {format(loss_val, ".4f")}'
+
 
         if self.metric_function is not None:
             metric_val = self.metric(prediction, y_test)
@@ -214,23 +218,21 @@ class Sequential_GPU:
             if verbose:
                 print(f'Training on {len(x_train)} samples')
 
-            index = random.shuffle(index)           
+            random.shuffle(index)           
             for i in range(np.ceil(training_length / batch_size).astype(int)):
                 #start, end = i * batch_size, (i + 1) * batch_size
                 start = index[i]
                 end = start + batch_size
-                batch_x, batch_y = x_train[start:end], y_train[start:end]
-                # batch_x_gpu = cl_array.to_device(self.queue, batch_x.astype(np.float32))
-                # batch_y_gpu = cl_array.to_device(self.queue, batch_y.astype(np.float32))
+                batch_x, batch_y = x_train[start:end].copy(), y_train[start:end].copy()
 
                 self._back_prop(batch_x, batch_y)
 
+
+
             if verbose:
-                start, end = index[0], index[0]+batch_size
-                batch_x, batch_y = x_train[start:end], y_train[start:end]
-                # batch_x_gpu = cl_array.to_device(self.queue, batch_x.astype(np.float32))
-                # batch_y_gpu = cl_array.to_device(self.queue, batch_y.astype(np.float32))
-                evaluation = self.evaluate(batch_x, batch_y)
+                # start, end = index[5], index[5]+batch_size
+                # batch_x, batch_y = x_train[start:end].copy(), y_train[start:end].copy()
+                evaluation = self.evaluate(x_train, y_train)
                 print(f'Epoch {_ + 1}/{epochs}')
                 print(evaluation)
 

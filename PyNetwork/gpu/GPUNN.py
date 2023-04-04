@@ -81,6 +81,16 @@ class GPUOPERATOR:
                             A.data, B.data, np.int32(width), out.data).wait()
         return out
 
+    def sub1d(self, A, B):
+        """A, B are assumed to be on the device"""
+        assert len(A) == len(B), "1-d arrays have different length."
+        length = len(A)
+        out = cl_array.zeros_like(A)
+
+        self.program.ew_sub1d(self.queue, (length, ), None, 
+                            A.data, B.data, np.int32(length), out.data).wait()
+        return out
+    
     def div(self, A, B):
         if A.ndim == 1:
             height, width = B.shape
@@ -153,7 +163,7 @@ class GPUOPERATOR:
                                A.data, B.data, np.int32(width), out.data).wait()
         return out
 
-    def matmul(self, A, B):
+    def matmul_local(self, A, B):
         """A, B are assumed to be on the device"""
         heightA, widthA = A.shape
         heightB, widthB = B.shape
@@ -168,7 +178,7 @@ class GPUOPERATOR:
                     np.int32(heightA), np.int32(widthA), np.int32(heightB), np.int32(widthB), A.data, B.data, out.data).wait()
         return out
     
-    def matmul1d(self, A, B):
+    def matmul(self, A, B):
         """A, B are assumed to be on the device"""
         heightA, widthA = A.shape
         heightB, widthB = B.shape
@@ -326,10 +336,14 @@ class GPUOPERATOR:
     def relu(self, A):
         """A is assumed to be on the device"""
         out = cl_array.zeros_like(A)
-        programme = ElementwiseKernel(self.context,"float *a_gpu, float *out",
-                                          "out[i] = 0.5* (a_gpu[i] + fabs(a_gpu[i]))",
-                                          "relu")
-        programme(A, out)
+        relu_program = ElementwiseKernel(self.context, 
+                                 "float *x, float *out",
+                                 "out[i] = x[i] > 0 ? x[i] : 0.0", 
+                                 "relu")
+        # programme = ElementwiseKernel(self.context,"float *a_gpu, float *out",
+        #                                   "out[i] = 0.5* (a_gpu[i] + fabs(a_gpu[i]))",
+        #                                   "relu")
+        relu_program(A, out)
         return out
     
     def tanh(self, A):
@@ -367,9 +381,29 @@ class GPUOPERATOR:
     def clip(self,A,vmin,vmax):
         """
 		Use 2 relus to perform clipping
-		
-
     	"""
         return self.relu(A-vmin) - self.relu(A-vmax) + vmin
+    
+    def softmax(self, A):
+        """A is assumed to be on the device"""
+                
+        out = cl_array.zeros_like(A)
+        input_length = A.shape[-1]
+        height = A.shape[:-1]
+
+        self.program.max_across_last_axis(self.queue, height, None,
+                            A.data, np.int32(input_length), out.data).wait()
+        
+        z = self.sub(A, out)
+        numerator = self.exp(z)
+        denominator =  self.sum(numerator, axis=1)
+        return self.div(numerator, denominator)
+        #np.sum(numerator, axis=-1, keepdims=True)
+
+        # temp = numerator / denominator
+        # print(temp.shape)
+        # return temp
+
+        # return numerator / denominator
 		 
    
